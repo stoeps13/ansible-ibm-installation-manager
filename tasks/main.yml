@@ -1,29 +1,13 @@
 ---
 
-- name: Update apt cache
-  apt: update_cache=yes cache_valid_time=3600
-
-- name: Install pre-requisites
-  apt: name={{item}} state=present
-  with_items:
-    - unzip
-
 - name: Create Temp directory
   file: path={{ tmp_location }} state=directory mode=0755
 
-# Grab the staged installer files
-# TODO: reimplement with unarchive module adding in ansible 2.0
-- name: Download local copy of installer
-  get_url:
-    url={{ media_host }}/software/ibm/installation_manager/{{ version }}/agent.installer.{{ platform }}.gtk.{{ architecture }}_{{ version_tag }}.zip
-    dest={{ tmp_location }}/ibmim.zip
-
-# Extract the installation files
-- name: Extract archive
-  command:
-    chdir={{ tmp_location }}
-    /usr/bin/unzip -q {{ tmp_location }}/ibmim.zip
-    creates={{tmp_location }}/install
+- name: Download and extract local copy of installer
+  unarchive:
+    src: "{{ media_host }}/software/ibm/installation_manager/{{ version }}/agent.installer.{{ platform }}.gtk.{{ architecture }}_{{ version_tag }}.zip"
+    dest: "{{ tmp_location }}"
+    remote_src: yes
 
 - name: Run silent install to {{ ibmim_install_location }}
   command:
@@ -32,3 +16,6 @@
     creates={{ ibmim_install_location }}
   register: install
   changed_when: install.rc != 0
+
+- name: Remove Installer
+  file: path={{ tmp_location }} state=absent
